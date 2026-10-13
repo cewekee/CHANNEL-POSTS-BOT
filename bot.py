@@ -42,7 +42,7 @@ STATE_FILE = ROOT / "state.json"
 EMOJI_FILE = ROOT / "emoji.json"
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-CHAT_ID = os.getenv("CHAT_ID", "")
+CHAT_ID = os.getenv("CHAT_ID", "").strip()
 TZ = ZoneInfo(os.getenv("TZ_NAME", "Europe/Zagreb"))
 DRY_RUN = os.getenv("DRY_RUN") == "1"
 FORCE = os.getenv("FORCE", "").strip().lower()
@@ -53,7 +53,7 @@ MORNING_FROM, MORNING_TO = 9 * 60, 12 * 60
 WEIGHTS = {"joke": 0.38, "meme": 0.37, "fact": 0.25}
 MAX_FACTS_PER_DAY = 2
 
-API = f"https://api.telegram.org/bot{BOT_TOKEN}"
+API = f"https://api.telegram.org/bot{BOT_TOKEN.strip()}"
 MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа",
           "сентября", "октября", "ноября", "декабря"]
 
@@ -326,6 +326,7 @@ def main() -> None:
         else:
             log.info("До следующего поста %.0f мин", (state["next_at"] - ts) / 60)
 
+    failed = False
     if kind:
         em = Emoji(load(EMOJI_FILE, {"custom": [], "plain": ["🦁"]}))
         builders = {"morning": lambda: make_morning(em), "joke": lambda: make_joke(em, hist),
@@ -342,11 +343,15 @@ def main() -> None:
                 state["facts_count"] = state.get("facts_count", 0) + 1 if state.get("facts_day") == day else 1
                 state["facts_day"] = day
             log.info("Следующий пост через %.0f мин", (state["next_at"] - ts) / 60)
+        else:
+            failed = True
 
     for k in hist:  # история не растёт бесконечно
         hist[k] = hist[k][-300:]
     if not DRY_RUN:
         save(STATE_FILE, state)
+    if failed:  # запуск в GitHub станет красным — сразу видно, что пост не ушёл
+        raise SystemExit("Пост не отправлен — смотрите ошибку Telegram выше")
 
 
 if __name__ == "__main__":
