@@ -2,7 +2,8 @@
 CHANNEL POSTS BOT — автономный постер для Telegram-канала в стиле ScalpLedger.
 
 Каждый запуск (GitHub Actions раз в 10 минут) бот:
-  1. забирает эмодзи из сообщений, которые вы переслали боту в личку (кастомные эмодзи → emoji.json);
+  1. забирает эмодзи из сообщений, которые вы переслали боту в личку (кастомные эмодзи → emoji.json),
+     и запоминает каналы, куда его добавили (можно не искать CHAT_ID вручную);
   2. решает, пора ли публиковать, и публикует один пост;
   3. сохраняет состояние в state.json (его коммитит workflow).
 
@@ -15,7 +16,7 @@ CHANNEL POSTS BOT — автономный постер для Telegram-кана
 
 Переменные окружения:
   BOT_TOKEN          — токен бота (обязательно)
-  CHAT_ID            — канал/чат, куда постить: @username или -100… (обязательно)
+  CHAT_ID            — канал: @username или -100…; если пусто/AUTO/неверно — берётся канал, где бот админ
   ANTHROPIC_API_KEY  — ключ Claude для свежих шуток и мемов (необязательно, без него — банк)
   TZ_NAME            — часовой пояс расписания, по умолчанию Europe/Zagreb
   FORCE              — morning | joke | meme | fact — опубликовать сразу (для теста)
@@ -107,13 +108,13 @@ def utf16_slice(text: str, offset: int, length: int) -> str:
 
 
 def collect_emoji(state: dict) -> None:
-    """Забирает кастомные эмодзи из сообщений, присланных боту в личку."""
+    """Забирает кастомные эмодзи из сообщений в личке и запоминает каналы, куда добавили бота."""
     if DRY_RUN or not BOT_TOKEN:
         return
     try:
-        r = requests.get(f"{API}/getUpdates", params={"offset": state.get("update_offset", 0),
-                                                        "timeout": 0, "allowed_updates": '["message"]'},
-                         timeout=20)
+        r = requests.get(f"{API}/getUpdates", params={
+            "offset": state.get("update_offset", 0), "timeout": 0,
+            "allowed_updates": '["message","channel_post","my_chat_member"]'}, timeout=20)
         data = r.json()
     except Exception as ex:
         log.warning("getUpdates не удался: %s", ex)
@@ -127,6 +128,17 @@ def collect_emoji(state: dict) -> None:
     replies: dict[int, int] = {}
     for upd in data.get("result", []):
         state["update_offset"] = upd["update_id"] + 1
+        # запоминаем каналы/группы, куда бота добавили, — чтобы не искать CHAT_ID вручную
+        for key in ("my_chat_member", "channel_post"):
+            ch = (upd.get(key) or {}).get("chat") or {}
+            if ch.get("type") in ("channel", "supergroup", "group"):
+                status = ((upd.get(key) or {}).get("new_chat_member") or {}).get("status", "administrator")
+                chats = state.setdefault("known_chats", {})
+                if status in ("left", "kicked"):
+                    chats.pop(str(ch["id"]), None)
+                else:
+                    chats[str(ch["id"])] = ch.get("title", "")
+                    log.info("Бот видит чат: %s (%s)", ch.get("title"), ch["id"])
         msg = upd.get("message") or {}
         if (msg.get("chat") or {}).get("type") != "private":
             continue
@@ -289,8 +301,8 @@ def choose_kind(state: dict, today: str) -> str:
 
 
 def main() -> None:
-    if not DRY_RUN and (not BOT_TOKEN or not CHAT_ID):
-        raise SystemExit("Нужны BOT_TOKEN и CHAT_ID")
+    if not DRY_RUN and not BOT_TOKEN:
+        raise SystemExit("Нужен BOT_TOKEN")
 
     state = load(STATE_FILE, {})
     hist = state.setdefault("history", {})
@@ -298,6 +310,15 @@ def main() -> None:
         hist.setdefault(k, [])
 
     collect_emoji(state)
+
+    global CHAT_ID
+    known = state.get("known_chats", {})
+    if known:
+        log.info("Каналы, где есть бот: %s", ", ".join(f"{t} = {i}" for i, t in known.items()))
+    # CHAT_ID не задан, задан как AUTO или неверный, а бот состоит ровно в одном канале — берём его
+    if len(known) == 1 and (CHAT_ID.upper() in ("", "AUTO") or CHAT_ID not in known and not CHAT_ID.startswith("@")):
+        CHAT_ID = next(iter(known))
+        log.info("Публикую в найденный канал %s", CHAT_ID)
 
     now = datetime.now(TZ)
     ts = time.time()
@@ -345,6 +366,9 @@ def main() -> None:
             log.info("Следующий пост через %.0f мин", (state["next_at"] - ts) / 60)
         else:
             failed = True
+            if not known:
+                log.error("Бот не видит ни одного канала. Добавьте его в канал администратором "
+                          "(или удалите и добавьте заново) — при следующем запуске он найдёт канал сам.")
 
     for k in hist:  # история не растёт бесконечно
         hist[k] = hist[k][-300:]
