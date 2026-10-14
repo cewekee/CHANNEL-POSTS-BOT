@@ -8,10 +8,10 @@
   "facts": []
  },
  "day": "2026-10-14",
- "morning_done": false,
+ "morning_done": true,
  "morning_at": 1791963900.111929,
  "update_offset": 185070391,
- "last_kind": "meme",
- "last_post_at": 1791909691.1773996,
- "next_at": 1791917155.1361074
+ "last_kind": "morning",
+ "last_post_at": 1791973061.2838237,
+ "next_at": 1791978553.2416425
 }
