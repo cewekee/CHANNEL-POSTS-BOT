@@ -11,12 +11,12 @@
   ]
  },
  "day": "2026-10-15",
- "morning_done": false,
+ "morning_done": true,
  "morning_at": 1792057800.514692,
  "update_offset": 185070391,
- "last_kind": "meme",
- "last_post_at": 1792006049.2522213,
- "next_at": 1792009836.9829507,
+ "last_kind": "morning",
+ "last_post_at": 1792058774.8172941,
+ "next_at": 1792066676.0260868,
  "facts_count": 1,
  "facts_day": "2026-10-14"
 }
