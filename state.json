@@ -17,12 +17,12 @@
   ]
  },
  "day": "2026-10-17",
- "morning_done": false,
+ "morning_done": true,
  "morning_at": 1792223220.945239,
  "update_offset": 185070391,
- "last_kind": "meme",
- "last_post_at": 1792182602.8416793,
- "next_at": 1792186215.5853598,
+ "last_kind": "morning",
+ "last_post_at": 1792230011.663826,
+ "next_at": 1792237958.3293831,
  "facts_count": 1,
  "facts_day": "2026-10-16"
 }
