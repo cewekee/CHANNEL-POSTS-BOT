@@ -21,12 +21,12 @@
   ]
  },
  "day": "2026-10-18",
- "morning_done": false,
+ "morning_done": true,
  "morning_at": 1792314900.812207,
  "update_offset": 185070391,
- "last_kind": "joke",
- "last_post_at": 1792270866.6705453,
- "next_at": 1792276725.5461879,
+ "last_kind": "morning",
+ "last_post_at": 1792316901.5627494,
+ "next_at": 1792323926.134987,
  "facts_count": 1,
  "facts_day": "2026-10-17"
 }
