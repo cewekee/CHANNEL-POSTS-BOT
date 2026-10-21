@@ -28,7 +28,7 @@
   ]
  },
  "day": "2026-10-21",
- "morning_done": false,
+ "morning_done": true,
  "morning_at": 1792568640.668534,
  "update_offset": 185070391,
  "last_kind": "fact",
